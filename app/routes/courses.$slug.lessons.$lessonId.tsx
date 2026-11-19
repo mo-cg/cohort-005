@@ -1,10 +1,8 @@
-import { eq } from "drizzle-orm";
 import { AlertTriangle } from "lucide-react";
 import { data, isRouteErrorResponse, Link } from "react-router";
 import { z } from "zod";
 import { Button } from "~/components/ui/button";
 import { db } from "~/db";
-import { quizzes } from "~/db/schema";
 import { isBookmarked, toggleBookmark } from "~/lib/bookmarks.server";
 import {
   createComment,
@@ -433,8 +431,8 @@ export async function action({ params, request }: Route.ActionArgs) {
     }
     // Scope the quiz to this lesson so a quiz elsewhere can't be reached by
     // posting its id to this route.
-    const quiz = db.select().from(quizzes).where(eq(quizzes.id, quizId)).get();
-    if (!quiz || quiz.lessonId !== lessonId) {
+    const quiz = getQuizByLessonId(lessonId);
+    if (!quiz || quiz.id !== quizId) {
       throw data("Quiz not found", { status: 404 });
     }
 
