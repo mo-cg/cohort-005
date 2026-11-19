@@ -3,7 +3,12 @@ import { createTestDb, seedBaseData, type TestDb } from "~/test/setup";
 import * as schema from "~/db/schema";
 import { UserRole } from "~/db/schema";
 import { plainText } from "~/lib/text";
-import { getNote, listNotes, saveNote } from "./notes.server";
+import {
+  getNote,
+  listNotes,
+  listNotesPage,
+  saveNote,
+} from "~/modules/notes/index.server";
 
 const NOW = new Date(2026, 9, 6, 12, 0, 0);
 
@@ -162,5 +167,58 @@ describe("listing Notes", () => {
         },
       },
     ]);
+  });
+});
+
+describe("note presentation", () => {
+  it("preserves line breaks in existing plain text notes", async () => {
+    saveNote(db, base.user.id, lessonIds[0], "First line\nSecond line", NOW);
+    const page = await listNotesPage(db, base.user.id, 1);
+    expect(page.savedNotes[0].html).toContain("First line<br>Second line");
+  });
+
+  it("renders Markdown while escaping unsafe content", async () => {
+    const { renderNote } = await import("~/modules/notes/index.server");
+    const html = await renderNote(
+      "**important** <script>alert(1)</script> [bad](javascript:alert(1))"
+    );
+    expect(html).toContain("<strong>important</strong>");
+    expect(html).not.toContain("<script>");
+    expect(html).not.toContain('href="javascript:');
+  });
+
+  it("returns a rendered page with a next-page indicator", async () => {
+    saveNote(db, base.user.id, lessonIds[0], "**Hello**", NOW);
+    const page = await listNotesPage(db, base.user.id, 1);
+    expect(page.hasMoreNotes).toBe(false);
+    expect(page.savedNotes[0].html).toContain("<strong>Hello</strong>");
+  });
+
+  it("limits pages and keeps notes in deterministic order", async () => {
+    const module = db
+      .insert(schema.modules)
+      .values({ courseId: base.course.id, title: "More", position: 2 })
+      .returning()
+      .get();
+    for (let position = 1; position <= 22; position++) {
+      const lesson = db
+        .insert(schema.lessons)
+        .values({ moduleId: module.id, title: `More ${position}`, position })
+        .returning()
+        .get();
+      saveNote(db, base.user.id, lesson.id, `Note ${position}`, NOW);
+    }
+    const first = listNotes(db, base.user.id, 1);
+    const second = listNotes(db, base.user.id, 2);
+    expect((await listNotesPage(db, base.user.id, 1)).hasMoreNotes).toBe(true);
+    expect((await listNotesPage(db, base.user.id, 1)).savedNotes).toHaveLength(
+      20
+    );
+    expect(first).toHaveLength(21);
+    expect(second).toHaveLength(2);
+    expect(first[20].id).toBe(second[0].id);
+    expect(
+      new Set([...first.slice(0, 20), ...second].map((note) => note.id)).size
+    ).toBe(22);
   });
 });
