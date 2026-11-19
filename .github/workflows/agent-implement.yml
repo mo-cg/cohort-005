@@ -22,7 +22,7 @@ name: Agent — Implement A Ticket
 #   to it in prompt.md.
 #
 # WHAT IT NEEDS
-#   secrets.OPENAI_API_KEY — the agent's auth token. To change the
+#   secrets.AI_GATEWAY_API_KEY — the agent's auth token. To change the
 #     agent or how it is billed, see
 #     .sandcastle/agent-workflows/shared/common.ts.
 #   secrets.FACTORY_PAT — a fine-grained PAT on this repository with Issues,
@@ -184,7 +184,7 @@ jobs:
 
       - name: Build the ticket
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         run: npx tsx .sandcastle/agent-workflows/implement/implement.ts
 
       - name: Check the agent committed

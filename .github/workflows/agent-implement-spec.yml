@@ -63,7 +63,7 @@ name: Agent — Implement A Spec
 #
 # WHAT IT NEEDS
 #
-#   secrets.OPENAI_API_KEY    — the agent's auth token. Both agents are
+#   secrets.AI_GATEWAY_API_KEY    — the agent's auth token. Both agents are
 #                               Sandcastle scripts in
 #                               .sandcastle/agent-workflows/implement-spec/.
 #   secrets.FACTORY_PAT       — a fine-grained PAT on this repository with
@@ -308,7 +308,7 @@ jobs:
 
       - name: Decompose the spec into a queue
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
           OUTPUT_DIR: ${{ runner.temp }}
         # Reads only. The queue comes back as queue.json, shaped and validated
         # by .sandcastle/agent-workflows/implement-spec/decomposition-schema.ts.
@@ -474,7 +474,7 @@ jobs:
 
       - name: Build the ticket
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
         run: npx tsx .sandcastle/agent-workflows/implement-spec/build.ts
 
       - name: Check the agent committed

@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as os from "node:os";
 import * as sandcastle from "@ai-hero/sandcastle";
 
 export const outputDir = (): string => process.env.OUTPUT_DIR ?? "/tmp";
@@ -21,12 +22,33 @@ export const writeJson = (filename: string, value: unknown): void => {
   );
 };
 
-// The one agent every factory workflow runs.
-// Sandcastle runs every agent with its permission checks skipped, so it can
-// use any tool.
-export const agent = () =>
-  sandcastle.codex("gpt-6.1-terra", {
-    env: {
-      OPENAI_API_KEY: required("OPENAI_API_KEY"),
+// Keep the gateway configuration and Codex sessions separate from any local
+// Codex login. Sandcastle needs both session paths to resume for extraction.
+export const agent = () => {
+  const apiKey = required("AI_GATEWAY_API_KEY");
+  const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), "factory-codex-"));
+  const sessions = path.join(codexHome, "sessions");
+  const capturedSessions = path.join(codexHome, "captured-sessions");
+  fs.writeFileSync(
+    path.join(codexHome, "config.toml"),
+    `model_provider = "vercel"
+
+[model_providers.vercel]
+name = "Vercel AI Gateway"
+base_url = "https://ai-gateway.vercel.sh/codex/v1"
+env_key = "AI_GATEWAY_API_KEY"
+wire_api = "responses"
+`
+  );
+  process.once("exit", () =>
+    fs.rmSync(codexHome, { recursive: true, force: true })
+  );
+
+  return sandcastle.codex("openai/gpt-6.1-terra", {
+    env: { AI_GATEWAY_API_KEY: apiKey, CODEX_HOME: codexHome },
+    sessionStorage: {
+      hostSessionsDir: capturedSessions,
+      sandboxSessionsDir: sessions,
     },
   });
+};
