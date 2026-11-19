@@ -171,6 +171,12 @@ describe("listing Notes", () => {
 });
 
 describe("note presentation", () => {
+  it("preserves line breaks in existing plain text notes", async () => {
+    saveNote(db, base.user.id, lessonIds[0], "First line\nSecond line", NOW);
+    const page = await listNotesPage(db, base.user.id, 1);
+    expect(page.savedNotes[0].html).toContain("First line<br>Second line");
+  });
+
   it("renders Markdown while escaping unsafe content", async () => {
     const { renderNote } = await import("~/modules/notes/index.server");
     const html = await renderNote(

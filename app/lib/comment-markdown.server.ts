@@ -80,7 +80,10 @@ function safeHref(href: string | null): string | null {
   }
 }
 
-export async function renderComment(markdown: Markdown): Promise<string> {
+export async function renderComment(
+  markdown: Markdown,
+  options?: { breaks?: boolean }
+): Promise<string> {
   const hl = await getHighlighter();
 
   const renderer = new Renderer();
@@ -110,5 +113,9 @@ export async function renderComment(markdown: Markdown): Promise<string> {
   // No images in comments — avoids tracking pixels and layout-breaking uploads.
   renderer.image = ({ text }) => escapeHtml(text ?? "");
 
-  return marked.parse(markdown, { renderer, async: false }) as string;
+  return marked.parse(markdown, {
+    renderer,
+    async: false,
+    ...options,
+  }) as string;
 }

@@ -98,7 +98,7 @@ export function listNotes(db: Db, studentId: number, page = 1) {
 
 /** Render student-authored Markdown with the untrusted-content renderer. */
 export function renderNote(body: string) {
-  return renderComment(markdown(body));
+  return renderComment(markdown(body), { breaks: true });
 }
 
 export async function listNotesPage(db: Db, studentId: number, page: number) {
