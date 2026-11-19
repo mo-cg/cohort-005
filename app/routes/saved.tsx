@@ -3,7 +3,8 @@ import type { Route } from "./+types/saved";
 import { db } from "~/db";
 import { people } from "~/modules/permissions/person.server";
 import { listBookmarks } from "~/lib/bookmarks.server";
-import { listNotes } from "~/lib/notes.server";
+import { listNotesPage } from "~/modules/notes/index.server";
+import { z } from "zod";
 import { Card, CardContent } from "~/components/ui/card";
 import { Bookmark, NotebookPen } from "lucide-react";
 import { formatRelativeTime } from "~/lib/utils";
@@ -18,14 +19,22 @@ export function meta() {
 export async function loader({ request }: Route.LoaderArgs) {
   const { id: userId } = await people.requirePerson(request);
 
+  const page = z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(100000)
+    .catch(1)
+    .parse(new URL(request.url).searchParams.get("notesPage") ?? 1);
   return {
+    page,
+    ...(await listNotesPage(db, userId, page)),
     savedBookmarks: listBookmarks(db, userId),
-    savedNotes: listNotes(db, userId),
   };
 }
 
 export default function Saved({ loaderData }: Route.ComponentProps) {
-  const { savedBookmarks, savedNotes } = loaderData;
+  const { savedBookmarks, savedNotes, page, hasMoreNotes } = loaderData;
 
   return (
     <div className="p-6">
@@ -74,8 +83,11 @@ export default function Saved({ loaderData }: Route.ComponentProps) {
             <div className="space-y-2">
               {savedNotes.map((note) => (
                 <SavedLessonCard key={note.id} lesson={note.lesson}>
-                  {/* Plain text — a Note is never rendered as Markdown. */}
-                  <p className="whitespace-pre-wrap text-sm">{note.body}</p>
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none break-words"
+                    // oxlint-disable-next-line react/no-danger -- renderNote escapes untrusted HTML
+                    dangerouslySetInnerHTML={{ __html: note.html }}
+                  />
                   <p
                     suppressHydrationWarning
                     className="text-xs text-muted-foreground"
@@ -86,6 +98,18 @@ export default function Saved({ loaderData }: Route.ComponentProps) {
               ))}
             </div>
           )}
+          <nav aria-label="Notes pages" className="mt-3 flex gap-4 text-sm">
+            {page > 1 && (
+              <Link to={`?notesPage=${page - 1}`} className="underline">
+                Previous notes
+              </Link>
+            )}
+            {hasMoreNotes && (
+              <Link to={`?notesPage=${page + 1}`} className="underline">
+                Next notes
+              </Link>
+            )}
+          </nav>
         </section>
       </div>
     </div>
