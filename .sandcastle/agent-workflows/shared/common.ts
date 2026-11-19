@@ -23,12 +23,12 @@ export const writeJson = (filename: string, value: unknown): void => {
 };
 
 // Keep the gateway configuration and Codex sessions separate from any local
-// Codex login. Sandcastle needs both session paths to resume for extraction.
+// Codex login. The factory uses no-sandbox, so Sandcastle must look for
+// sessions in the same directory where Codex writes them.
 export const agent = () => {
   const apiKey = required("AI_GATEWAY_API_KEY");
   const codexHome = fs.mkdtempSync(path.join(os.tmpdir(), "factory-codex-"));
   const sessions = path.join(codexHome, "sessions");
-  const capturedSessions = path.join(codexHome, "captured-sessions");
   fs.writeFileSync(
     path.join(codexHome, "config.toml"),
     `model_provider = "vercel"
@@ -47,7 +47,7 @@ wire_api = "responses"
   return sandcastle.codex("openai/gpt-6.1-terra", {
     env: { AI_GATEWAY_API_KEY: apiKey, CODEX_HOME: codexHome },
     sessionStorage: {
-      hostSessionsDir: capturedSessions,
+      hostSessionsDir: sessions,
       sandboxSessionsDir: sessions,
     },
   });
